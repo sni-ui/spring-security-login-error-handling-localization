@@ -1,0 +1,215 @@
+Let’s start by defining a very simple login page:
+
+<html>
+<head></head>
+<body>
+   <h1>Login</h1>
+   <form name='f' action="login" method='POST'>
+      <table>
+         <tr>
+            <td>User:</td>
+            <td><input type='text' name='username' value=''></td>
+         </tr>
+         <tr>
+            <td>Password:</td>
+            <td><input type='password' name='password' /></td>
+         </tr>
+         <tr>
+            <td><input name="submit" type="submit" value="submit" /></td>
+         </tr>
+      </table>
+  </form>
+</body>
+</html>
+
+
+//Now, let’s include a client side check to make sure the username and password have been entered before we even submit the form. For this example we’ll use plain Javascript, but JQuery is an excellent option as well:
+
+
+<script type="text/javascript">
+function validate() {
+    if (document.f.username.value == "" && document.f.password.value == "") {
+        alert("Username and password are required");
+        document.f.username.focus();
+        return false;
+    }
+    if (document.f.username.value == "") {
+        alert("Username is required");
+        document.f.username.focus();
+        return false;
+    }
+    if (document.f.password.value == "") {
+    alert("Password is required");
+    document.f.password.focus();
+        return false;
+    }
+}
+</script>
+
+//The message.properties files
+
+
+message.username=Username required
+message.password=Password required
+message.unauth=Unauthorized access!!
+message.badCredentials=Invalid username or password
+message.sessionExpired=Session timed out
+message.logoutError=Sorry, error login out
+message.logoutSucc=You logged out successfully
+
+//Configuring Spring MVC Localization
+
+@Override
+public void addInterceptors(InterceptorRegistry registry) {
+    LocaleChangeInterceptor localeChangeInterceptor = new LocaleChangeInterceptor();
+    localeChangeInterceptor.setParamName("lang");
+    registry.addInterceptor(localeChangeInterceptor);
+}
+@Bean
+public LocaleResolver localeResolver() {
+    CookieLocaleResolver cookieLocaleResolver = new CookieLocaleResolver();
+    return cookieLocaleResolver;
+}
+@Bean
+public MessageSource messageSource() {
+    ReloadableResourceBundleMessageSource messageSource = 
+      new ReloadableResourceBundleMessageSource();
+    messageSource.setBasename("classpath:messages");
+    messageSource.setUseCodeAsDefaultMessage(true);
+    messageSource.setDefaultEncoding("UTF-8");
+    messageSource.setCacheSeconds(0);
+    return messageSource;
+}
+
+//One important and more advanced note here is that we need to make sure that the messageSource bean is defined in the right Spring context
+
+@Bean
+public LocaleResolver localeResolver() {
+    CookieLocaleResolver cookieLocaleResolver = new CookieLocaleResolver();
+    cookieLocaleResolver.setDefaultLocale(Locale.ENGLISH);
+    return cookieLocaleResolver;
+}
+
+@Bean
+public LocaleResolver localeResolver() {
+    SessionLocaleResolver sessionLocaleResolver = new SessionLocaleResolver();
+    return sessionLocaleResolver;
+}
+
+//Lastly, note that the LocaleChangeInterceptor will change the locale based on the value of a lang parameter sent with the login page by simple links:
+
+<a href="?lang=en">English</a> |
+<a href="?lang=es_ES">Spanish</a>
+
+ JSP/JSLT Localization:
+<dependency>
+    <groupId>javax.servlet.jsp</groupId>
+    <artifactId>javax.servlet.jsp-api</artifactId>
+    <version>2.3.2-b01</version>
+</dependency>
+<dependency>
+    <groupId>javax.servlet</groupId>
+    <artifactId>jstl</artifactId>
+    <version>1.2</version>
+</dependency>
+
+//Displaying the Error Messages
+
+//Login Validation Errors
+
+1. Add the following tag lib element to the login.jsp:
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+
+2. Add the jsp/jslt element that will point to the messages.properties files:
+<fmt:setBundle basename="messages" />
+
+3. Add the following <fmt:…> elements to store the messages on jsp variables:
+<fmt:message key="message.password" var="noPass" />
+<fmt:message key="message.username" var="noUser" />
+
+
+
+4. Modify the login validation script we saw in Section 3 so as to localize the error messages:
+
+<script type="text/javascript">
+function validate() {
+    if (document.f.username.value == "" && document.f.password.value == "") {
+        alert("${noUser} and ${noPass}");
+    document.f.username.focus();
+    return false;
+    }
+    if (document.f.username.value == "") {
+    alert("${noUser}");
+    document.f.username.focus();
+    return false;
+     }
+     if (document.f.password.valu
+e == "") {
+    alert("${noPass}");
+    document.f.password.focus();
+    return false;
+     }
+}
+</script>
+
+//Pre Login Errors
+<c:if test="${param.regSucc == true}">
+    <div id="status">
+    <spring:message code="message.regSucc">    
+        </spring:message>
+    </div>
+</c:if>
+<c:if test="${param.regError == true}">
+    <div id="error">
+        <spring:message code="message.regError">   
+        </spring:message>
+    </div>
+</c:if>
+
+
+//Login Security Errors
+
+<c:if test="${param.error != null}">
+    <div id="error">
+        <spring:message code="message.badCredentials">   
+        </spring:message>
+    </div>
+</c:if>
+
+//Logout Errors
+
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ taglib prefix="sec"
+    uri="http://www.springframework.org/security/tags"%>
+<%@taglib uri="http://www.springframework.org/tags" prefix="spring"%>
+<c:if test="${not empty SPRING_SECURITY_LAST_EXCEPTION}">
+    <div id="error">
+        <spring:message code="message.logoutError">    
+        </spring:message>
+    </div>
+</c:if>
+<c:if test="${param.logSucc == true}">
+    <div id="success">
+    <spring:message code="message.logoutSucc">    
+        </spring:message>
+    </div>
+</c:if>
+<html>
+<head>
+<title>Logged Out</title>
+</head>
+<body>    
+    <a href="login.html">Login</a>
+</body>
+</html>
+
+// Redirecting to the Login Error URL
+
+authentication-failure-url="/login.html?error=true"
+
+//The Logout Success Redirect
+
+<logout
+  invalidate-session="false"
+  logout-success-url="/logout.html?logSucc=true"
+  delete-cookies="JSESSIONID" />
